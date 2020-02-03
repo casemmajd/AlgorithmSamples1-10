@@ -1,0 +1,110 @@
+============ Example for example of using =======================
+================== ArrayList ====================================
+================== Parameterized types ==========================
+================== Creating and using menus =====================
+=================================================================
+
+For a more complete and useful example, we will look at the program SimplePaint2.java. 
+This is a much improved version of SimplePaint.java from Subsection 6.3.3. 
+In the new program, the user can sketch curves in a drawing area by clicking and dragging with the mouse. 
+The user can select the drawing color using a menu. 
+The background color of the drawing area can also be selected using a menu. And there is a "Control" menu that contains several commands: 
+  An "Undo" command, which removes the most recently drawn curve from the screen, a "Clear" command that removes all the curves, and a "Use Symmetry" checkbox that turns a symmetry feature on and off. 
+  Curves that are drawn by the user when the symmetry option is on are reflected horizontally and vertically to produce a symmetric pattern. 
+  (Symmetry is there just to look pretty.)
+
+Unlike the original SimplePaint program, this new version uses a data structure to store information about the picture that has been drawn by the user. 
+When the user selects a new background color, the canvas is filled with the new background color, and all of the curves that were there previously are redrawn on the new background. 
+To do that, we need to store enough data to redraw all of the curves. 
+Similarly, the Undo command is implemented by deleting the data for most recently drawn curve, and then redrawing the entire picture using the remaining data.
+
+
+The data structure that we need is implemented using ArrayLists. 
+The main data for a curve consists of a list of the points on the curve. 
+This data is stored in an object of type ArrayList<Point2D>. 
+ (Point2D is standard class in package javafx.geometry. 
+ A Point2D can be constructed from two double values, giving the (x,y) coordinates of a point. 
+ A Point2D object, pt, has getter methods pt.getX() and pt.getY() that return the x and y coordinates.) 
+But in addition to a list of points on a curve, to redraw the curve, we also need to know its color, 
+and we need to know whether the symmetry option should be applied to the curve. 
+All the data that is needed to redraw the curve is grouped into an object of type CurveData that is defined as a nested class in the program:
+
+  private static class CurveData {
+    Color color;  // The color of the curve.
+    boolean symmetric;  // Are horizontal and vertical reflections also drawn?
+    ArrayList<Point2D> points;  // The points on the curve.
+  }
+
+However, a picture can contain many curves, not just one, so to store all the data necessary to redraw the entire picture, 
+we need a list of objects of type CurveData. For this list, the program uses an ArrayList, curves, declared as
+
+  ArrayList<CurveData> curves = new ArrayList<CurveData>();
+
+Here we have a list of objects, where each object contains a list of points as part of its data! 
+Let's look at a few examples of processing this data structure. 
+When the user clicks the mouse on the drawing surface, it's the start of a new curve, and a new CurveData object must be created. 
+The instance variables in the new CurveData object must also be initialized. 
+Here is the code from the mousePressed() routine that does this, where currentCurve is a global variable of type CurveData:
+
+  currentCurve = new CurveData();       // Create a new CurveData object.
+
+  currentCurve.color = currentColor;    // The color of a curve is taken from an
+                                        // instance variable that represents the
+                                        // currently selected drawing color.
+
+  currentCurve.symmetric = useSymmetry; // The "symmetric" property of the curve
+                                        // is also copied from the current value
+                                        // of an instance variable, useSymmetry.
+
+  currentCurve.points = new ArrayList<Point2D>();  // A new point list object.
+
+As the user drags the mouse, new points are added to currentCurve, and line segments of the curve are drawn between points as they are added. 
+When the user releases the mouse, the curve is complete, and it is added to the list of curves by calling
+
+  curves.add( currentCurve );
+
+When the user changes the background color or selects the "Undo" command, the picture has to be redrawn. 
+The program has a redraw() method that completely redraws the picture. 
+That method uses the data in curves to draw all the curves. T
+he basic structure is a for-each loop that processes the data for each individual curve in turn. This has the form:
+
+  for ( CurveData curve : curves ) {
+    .
+    .  // Draw the curve represented by the object, curve, of type CurveData.
+    .  
+  }
+
+
+In the body of this loop, curve.points is a variable of type ArrayList<Point2D> that holds the list of points on the curve. 
+The i-th point on the curve can be obtained by calling the get() method of this list: curve.points.get(i). 
+This returns a value of type Point2D which has getter methods named getX() and getY(). 
+We can refer directly to the x-coordinate of the i-th point as:
+
+  curve.points.get(i).getX()
+
+This might seem rather complicated, but it's a nice example of a complex name that specifies a path to a desired piece of data: 
+Go to the object, curve. Inside curve, go to points. Inside points, get the i-th item. And from that item, get the x coordinate by calling its getX() method. 
+
+
+private void redraw() {
+    g.setFill(backgroundColor);
+    g.fillRect(0,0,canvas.getWidth(),canvas.getHeight());
+    for ( CurveData curve : curves ) {
+        g.setStroke(curve.color);
+        for (int i = 1; i < curve.points.size(); i++) {
+                // Draw a line segment from point number i-1 to point number i.
+            double x1 = curve.points.get(i-1).getX();
+            double y1 = curve.points.get(i-1).getY();
+            double x2 = curve.points.get(i).getX();
+            double y2 = curve.points.get(i).getY();
+            drawSegment(curve.symmetric,x1,y1,x2,y2);
+        }
+    }
+}
+
+
+
+drawSegment() is a method that strokes the line segment from (x1,y1) to (x2,y2). 
+If the first parameter is true, it also draws the horizontal and vertical reflections of that segment.
+
+
